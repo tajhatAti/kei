@@ -24,7 +24,7 @@
      layering a tenth sheet over them could only ever be a coat of paint,
      because 1,973 lines of classic.css and 1,959 of runspace-dark.css
      kept asserting the old shape underneath. -->
-<link rel="stylesheet" href="/static/app.css?v=20260823b">
+<link rel="stylesheet" href="/static/app.css?v=20260906a">
 <script>
 /* THEME BEFORE PAINT.
  * data-theme was only set once pro.js ran, so the very first paint used the
@@ -281,14 +281,25 @@
         </div>
       </div>
     </div>
-    </div>
   </div>
+</section>
+
+<!-- Live activity — same motion as a payout ticker, but about deploys. -->
+<section class="section live-strip" aria-label="Live activity">
+  <div class="live-strip-head">
+    <span class="dot-live"></span>
+    <span>Live on CodeNest</span>
+  </div>
+  <div class="live-ticker" aria-hidden="true">
+    <div class="live-ticker-track" id="liveTickerTrack"></div>
+  </div>
+  <div class="live-toasts" id="liveToasts" aria-live="polite"></div>
 </section>
 
 <!-- ============ HOW IT WORKS ============ -->
 <section class="section" id="how">
   <div class="section-head reveal">
-    <div class="eyebrow center">HOW IT WORKS</div>
+    <div class="eyebrow">HOW IT WORKS</div>
     <h2>Two steps, <span class="grad">about a minute</span></h2>
   </div>
   <ol class="steps bot-steps">
@@ -308,7 +319,7 @@
 <!-- ============ FEATURES ============ -->
 <section class="section alt" id="features">
   <div class="section-head reveal">
-    <div class="eyebrow center">WHAT YOU GET</div>
+    <div class="eyebrow">WHAT YOU GET</div>
     <h2>Built for people who <span class="grad">ship bots</span></h2>
   </div>
   <div class="feat-grid">
@@ -629,9 +640,9 @@
           <span class="fc-body"><b>Use a template</b><small>Start from a complete, tested bot — no code needed to get the first one live.</small></span>
           <span class="fc-go">→</span>
         </button>
-        <button class="feat-card" onclick="switchTab('code')">
-          <span class="fc-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4.5 4L9 16M15 8l4.5 4L15 16"/></svg></span>
-          <span class="fc-body"><b>Write code</b><small>Use Code Studio to write &amp; run in the browser, and publish live pages with one tap.</small></span>
+        <button class="feat-card" onclick="switchTab('store')">
+          <span class="fc-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1 10.5H5z"/><path d="M8.5 9V6.5a3.5 3.5 0 0 1 7 0V9"/></svg></span>
+          <span class="fc-body"><b>Browse the store</b><small>Install a complete, tested Telegram bot in one tap — then keep editing the same Python file.</small></span>
           <span class="fc-go">→</span>
         </button>
       </div>
@@ -1228,6 +1239,7 @@
               <!-- 1 · HEADER ROW -->
               <header class="jd-top">
                 <button class="jd-back" id="jobDetailBack" type="button" title="Back to editor" aria-label="Back to editor">
+                  <svg viewBox="0 0 16 16" class="jd-i" fill="none" stroke=          <button class="jd-back" id="jobDetailBack" type="button" title="Back to editor" aria-label="Back to editor">
                   <svg viewBox="0 0 16 16" class="jd-i" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="10 3 5 8 10 13"/></svg>
                 </button>
 
@@ -1926,6 +1938,105 @@
 <script src="/static/miniapp.js?v=20260729a"></script>
 <script src="/static/pro.js?v=20260823b"></script>
 <script src="/static/terminal.js?v=20260724m"></script>
+<script>
+/* Live activity — EasySell-style ticker/toasts, CodeNest copy (deploys, not money). */
+(function () {
+  var EVENTS = [
+    { name: "Rahim", handle: "@ShopBot", action: "deployed", lang: "Python", status: "live" },
+    { name: "Israt", handle: "@SupportBot", action: "is live", lang: "Python", status: "live" },
+    { name: "Karim", handle: "@QuizBot", action: "restarted", lang: "Node", status: "online" },
+    { name: "Nabila", handle: "@OrderBot", action: "installed a template", lang: "Python", status: "live" },
+    { name: "Ahad", handle: "@NewsBot", action: "went online", lang: "Python", status: "24/7" },
+    { name: "Farhan", handle: "@TicketBot", action: "deployed", lang: "Node", status: "live" },
+    { name: "Mim", handle: "@RemindBot", action: "is running 24/7", lang: "Python", status: "online" },
+    { name: "Rafi", handle: "@EchoBot", action: "connected a token", lang: "Python", status: "verified" },
+    { name: "Sadia", handle: "@PanelBot", action: "published from the store", lang: "Python", status: "live" },
+    { name: "Tanim", handle: "@FileBot", action: "auto-restarted after a crash", lang: "Python", status: "ok" },
+    { name: "Lamia", handle: "@PollBot", action: "deployed", lang: "Python", status: "live" },
+    { name: "Nayeem", handle: "@AlertBot", action: "is live", lang: "Node", status: "online" }
+  ];
+
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function hue(name) {
+    var n = 0;
+    for (var i = 0; i < name.length; i++) n = (n * 31 + name.charCodeAt(i)) >>> 0;
+    return 220 + (n % 80);
+  }
+  function chipHTML(ev) {
+    return '<span class="live-chip">' +
+      '<span class="live-ava" style="background:hsl(' + hue(ev.name) + ' 62% 46%)">' + esc(ev.name.charAt(0)) + '</span>' +
+      '<b>' + esc(ev.name) + '</b>' +
+      '<span>' + esc(ev.action) + '</span>' +
+      '<code>' + esc(ev.handle) + '</code>' +
+      '<em>' + esc(ev.status) + '</em>' +
+    '</span>';
+  }
+  function toastHTML(ev) {
+    return '<div class="live-toast">' +
+      '<span class="live-ava" style="background:hsl(' + hue(ev.name) + ' 62% 46%)">' + esc(ev.name.charAt(0)) + '</span>' +
+      '<div class="live-toast-copy">' +
+        '<b>' + esc(ev.name) + '</b> ' + esc(ev.action) +
+        ' <code>' + esc(ev.handle) + '</code>' +
+        '<small>just now · ' + esc(ev.lang) + ' · ' + esc(ev.status) + '</small>' +
+      '</div>' +
+    '</div>';
+  }
+  function rowHTML(ev) {
+    return '<div class="dash-live-row">' +
+      '<span class="live-ava sm" style="background:hsl(' + hue(ev.name) + ' 62% 46%)">' + esc(ev.name.charAt(0)) + '</span>' +
+      '<span class="dash-live-copy"><b>' + esc(ev.name) + '</b> ' + esc(ev.action) +
+      ' <code>' + esc(ev.handle) + '</code></span>' +
+      '<em>' + esc(ev.status) + '</em>' +
+    '</div>';
+  }
+
+  function fillTicker() {
+    var track = document.getElementById("liveTickerTrack");
+    if (!track) return;
+    var html = EVENTS.map(chipHTML).join("");
+    track.innerHTML = html + html;
+  }
+
+  var toastI = 0;
+  function pushToast() {
+    var host = document.getElementById("liveToasts");
+    if (!host) return;
+    var landing = document.getElementById("screen-landing");
+    if (landing && landing.classList.contains("hidden")) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var ev = EVENTS[toastI % EVENTS.length];
+    toastI++;
+    var wrap = document.createElement("div");
+    wrap.innerHTML = toastHTML(ev);
+    var el = wrap.firstChild;
+    host.appendChild(el);
+    while (host.children.length > 3) host.removeChild(host.firstChild);
+    setTimeout(function () { el.classList.add("is-out"); }, 4200);
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 4800);
+  }
+
+  function fillDash() {
+    var list = document.getElementById("dashLiveList");
+    if (!list) return;
+    var start = toastI % EVENTS.length;
+    var html = "";
+    for (var i = 0; i < 5; i++) html += rowHTML(EVENTS[(start + i) % EVENTS.length]);
+    list.innerHTML = html;
+  }
+
+  function go() {
+    fillTicker();
+    fillDash();
+    pushToast();
+    setInterval(pushToast, 3200);
+    setInterval(fillDash, 6400);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go);
+  else go();
+})();
+</script>
 <script>
   // Safety net: never leave the user stuck on the splash — remove the
   // booting class AND hard-hide the splash element, whatever went wrong.
