@@ -2004,6 +2004,10 @@ body.rs-launch-complete #tab-jobs { height:100dvh; }
    by class, never deleted -- the same DOM has to work in a browser. */
 html.in-telegram nav.nav { display: none; }
 html.tg-hide-signout #btnLogout { display: none; }
+/* Leftover dash-bar chevron — Telegram already has its own collapse control,
+   and this one sat on an empty black pane looking like a broken dropdown. */
+html.in-telegram #sideCollapse,
+#sideCollapse { display: none !important; }
 /* Telegram client colours must never repaint the product surface. Some
    Android themes report a saturated blue bg_color; that is appropriate for
    Telegram chrome, not for the CodeNest canvas. */
@@ -3609,8 +3613,15 @@ body.rs-menu-open .rs-menu-scrim { opacity: 1; visibility: visible; pointer-even
    empty state and the workspace are mutually exclusive, so give it a layer
    above the editor surface for the case where both are briefly visible
    during a fetch. */
-#tab-jobs .rs-empty { position: relative; z-index: 5; }
+#tab-jobs .rs-empty {
+  position: relative; z-index: 5;
+  flex: 1 1 auto; min-height: 0; width: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: var(--bg);
+}
 #tab-jobs .rs-empty-btn { position: relative; z-index: 6; }
+#tab-jobs #wbBootLoader { display: none; }
 
 /* ══════════════════════════════════════════════════════════════════════════
    RUNSPACE FILE BROWSER
@@ -3774,7 +3785,24 @@ body.rs-menu-open .rs-menu-scrim { opacity: 1; visibility: visible; pointer-even
    RUNSPACE — Run on the header; panels rise a little, not full screen
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* Save & Run, beside the status text. */
+/* Save + Run, beside the status text. */
+#tab-jobs .rs-head-acts {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  flex: 0 0 auto;
+}
+#tab-jobs .rs-head-acts[hidden] { display: none; }
+#tab-jobs .rs-save-quick {
+  display: inline-flex; align-items: center; gap: var(--s2);
+  height: var(--ctl-h-sm); padding: 0 var(--s-3); flex: 0 0 auto;
+  background: var(--card-2); color: var(--fg);
+  border: 1px solid var(--line); border-radius: var(--r-pill);
+  font-size: var(--t-sm); font-weight: 600; white-space: nowrap;
+  box-shadow: var(--e1);
+}
+#tab-jobs .rs-save-quick[hidden] { display: none; }
+#tab-jobs .rs-save-quick:active { transform: translateY(1px); }
+#tab-jobs .rs-save-quick.dirty { border-color: var(--warn); color: var(--fg); }
+#tab-jobs .rs-save-quick.loading { opacity: .82; cursor: progress; pointer-events: none; }
 #tab-jobs .rs-run-quick {
   display: inline-flex; align-items: center; gap: var(--s2);
   /* Sits in .rs-head beside .rs-ghost-btn. It was the last control in
@@ -3839,8 +3867,10 @@ body.rs-menu-open .rs-menu-scrim { opacity: 1; visibility: visible; pointer-even
 }
 @media (max-width: 400px) {
   /* Only the glyph at the narrowest sizes, so the job name keeps its room. */
-  #tab-jobs .rs-run-quick span { display: none; }
-  #tab-jobs .rs-run-quick { width: var(--ctl-h-sm); padding: 0; justify-content: center; }
+  #tab-jobs .rs-run-quick span,
+  #tab-jobs .rs-save-quick span { display: none; }
+  #tab-jobs .rs-run-quick,
+  #tab-jobs .rs-save-quick { width: var(--ctl-h-sm); padding: 0; justify-content: center; }
 }
 
 /* The inspector ("Details") used `inset: auto 0 0 0`, a shorthand that did
@@ -3923,11 +3953,10 @@ body.rs-menu-open .rs-menu-scrim { opacity: 1; visibility: visible; pointer-even
 #tab-jobs .rs-jp-meta { flex: 0 0 auto; font-size: var(--t-xs); color: var(--fg-3); }
 #tab-jobs .rs-jp-empty { padding: var(--s-3); color: var(--fg-3); font-size: var(--t-sm); }
 
-/* Unified top-level bot menu. One three-dot control replaces the old drawer
-   and duplicate header Run button. The panel is deliberately compact; blur is
-   limited to this small surface, never the editor or scrolling page. */
+/* Unified top-level bot menu. One three-dot control replaces the old drawer.
+   Save and Run stay on the header so editing does not require opening ⋯.
+   The hamburger and inspector are leftover; keep them out of the row. */
 #tab-jobs #wbMenuBtn,
-#tab-jobs #btnRunQuick,
 #tab-jobs #btnInspector { display:none !important; }
 #tab-jobs #rsMoreBtn { width:40px; height:40px; border:1px solid var(--line-2); background:var(--card-2); }
 #tab-jobs #rsMoreMenu {
@@ -3973,9 +4002,12 @@ body.rs-menu-open .rs-menu-scrim { opacity: 1; visibility: visible; pointer-even
 /* An earlier rule stripped the text under 400px, leaving a bare triangle
    that reads as nothing. The label is the point; the icon can go instead. */
 @media (max-width: 400px) {
-  #tab-jobs .rs-run-quick span { display: inline !important; }
-  #tab-jobs .rs-run-quick svg { display: none; }
-  #tab-jobs .rs-run-quick {
+  #tab-jobs .rs-run-quick span,
+  #tab-jobs .rs-save-quick span { display: inline !important; }
+  #tab-jobs .rs-run-quick svg,
+  #tab-jobs .rs-save-quick svg { display: none; }
+  #tab-jobs .rs-run-quick,
+  #tab-jobs .rs-save-quick {
     width: auto !important; padding: 0 var(--s-2) !important;
     font-size: var(--t-xs);
   }

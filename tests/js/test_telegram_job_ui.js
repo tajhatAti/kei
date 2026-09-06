@@ -18,7 +18,8 @@ if(!/telegram_verification_id=_rsTelegramVerificationId/.test(JS))throw Error('v
 if(/rs-awaiting-bot/.test(JS+CSS))throw Error('token-first editor lock still exists');
 if(!/Opened .*tap Continue when ready/.test(JS))throw Error('upload does not lead to Continue');
 if(!/Add Bot 🤖/.test(HTML))throw Error('old job creation label remains');
-if(!dom.window.document.getElementById('rsBotHealth')||!/telegram-health/.test(JS))throw Error('live Telegram delivery health is missing');
+if(dom.window.document.getElementById('rsBotHealth'))throw Error('Check health button should be gone');
+if(!/telegram-health/.test(JS)||!/_checkRunSpaceBotHealth/.test(JS))throw Error('live Telegram delivery health is missing');
 if(!dom.window.document.getElementById('jdTabVersions')||!/revisions\/.*\$\{revisionId\}\/rollback/.test(JS))throw Error('version rollback UI is missing');
 if(!dom.window.document.getElementById('rsBrowseTemplates')||!dom.window.document.getElementById('rsTemplateModal')||!/telegram-bot\/templates/.test(JS))throw Error('custom starter template picker is missing');
 console.log('16 code-first Telegram hosting UI checks passed');

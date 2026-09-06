@@ -25,6 +25,7 @@ class JobUpdateRequest(BaseModel):
     entry: Optional[str] = None
     env: Optional[dict] = None
     telegram_verification_id: Optional[str] = None
+    save_only: bool = False
 
 
 class EntryPinPayload(BaseModel):
@@ -1176,8 +1177,52 @@ def update_job(job_id: int, payload: JobUpdateRequest, request: Request, authori
     persistent workspace (SQLite DBs, session files, referral counts, …).
     Use this for bug fixes / feature adds: users' data NEVER gets wiped."""
     user, _ = get_current_user_and_session(authorization)
-    rate_limit_user(user["id"], "exec")
     row = _get_own_job(job_id, user)
+    if payload.save_only:
+        # Persist the editor to the DB without touching the running process.
+        # Run / Save & Run still goes through the full in-place redeploy path.
+        new_name = (payload.name or row["name"] or "").strip()[:60] or row["name"]
+        new_lang = (payload.language or row["language"] or "python").strip()
+        new_code = payload.code if payload.code is not None else row["code"]
+        existing_env = _row_env(row)
+        new_env = (_restore_masked_env(_clean_env_map(payload.env), existing_env)
+                   if payload.env is not None else existing_env)
+        token = str(new_env.get("BOT_TOKEN") or "").strip()
+        if token:
+            new_code, new_env = telegram_detector.secure_bot_source(
+                new_code, new_env, token, new_lang)
+        now = now_utc_str()
+        if new_name != (row["name"] or ""):
+            conn0 = get_db_connection()
+            try:
+                dup = conn0.execute(
+                    "SELECT id FROM jobs WHERE user_id = ? AND id != ? AND LOWER(name) = LOWER(?)",
+                    (user["id"], job_id, new_name),
+                ).fetchone()
+                if dup:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"You already have a job named \u201c{new_name}\u201d — choose a different name.",
+                    )
+            finally:
+                conn0.close()
+        conn = get_db_connection()
+        try:
+            conn.execute(
+                "UPDATE jobs SET name=?,language=?,code=?,env=?,updated_at=? WHERE id=?",
+                (new_name, new_lang, new_code, secrets_store.pack_env(new_env), now, job_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        out = dict(row)
+        out.update({"name": new_name, "language": new_lang, "code": new_code,
+                    "saved": True, "save_only": True, "job_db_id": job_id})
+        out["env"] = _public_env(new_env)
+        _attach_telegram_public(out)
+        return out
+
+    rate_limit_user(user["id"], "exec")
     rid = row.get("runner_job_id")
     if not rid:
         raise HTTPException(status_code=409, detail="Job has no runner id — press Restart once, then retry edit.")

@@ -24,7 +24,7 @@
      layering a tenth sheet over them could only ever be a coat of paint,
      because 1,973 lines of classic.css and 1,959 of runspace-dark.css
      kept asserting the old shape underneath. -->
-<link rel="stylesheet" href="/static/app.css?v=20260906a">
+<link rel="stylesheet" href="/static/app.css?v=20260906b">
 <script>
 /* THEME BEFORE PAINT.
  * data-theme was only set once pro.js ran, so the very first paint used the
@@ -884,13 +884,20 @@
           <span class="rs-chip" id="rsHeadState" hidden></span>
         </div>
 
-        <!-- Run lives on the header, beside the status text: it is the one
-             action used constantly, and reaching it through the menu meant
-             two taps every single time. -->
-        <button type="button" class="rs-run-quick" id="btnRunQuick" title="Save &amp; Run" hidden>
-          <svg viewBox="0 0 16 16" class="rs-ic-sm" fill="currentColor" aria-hidden="true"><path d="M4.5 3.3v9.4c0 .3.3.5.6.3l7.4-4.7a.4.4 0 0 0 0-.6L5.1 3a.4.4 0 0 0-.6.3Z"/></svg>
-          <span>Save &amp; Run</span>
-        </button>
+        <!-- Save and Run live on the editor header. Save writes the code
+             without restarting the process; Run deploys. Both used to sit
+             behind the ⋯ menu (and Run was CSS-hidden), so editing had no
+             visible Save. -->
+        <div class="rs-head-acts" id="rsHeadActs" hidden>
+          <button type="button" class="rs-save-quick" id="btnSaveQuick" title="Save (Ctrl+S)" hidden>
+            <svg viewBox="0 0 24 24" class="rs-ic-sm" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4"/><rect x="8" y="12" width="8" height="7" rx="1"/></svg>
+            <span>Save</span>
+          </button>
+          <button type="button" class="rs-run-quick" id="btnRunQuick" title="Run" hidden>
+            <svg viewBox="0 0 16 16" class="rs-ic-sm" fill="currentColor" aria-hidden="true"><path d="M4.5 3.3v9.4c0 .3.3.5.6.3l7.4-4.7a.4.4 0 0 0 0-.6L5.1 3a.4.4 0 0 0-.6.3Z"/></svg>
+            <span>Run</span>
+          </button>
+        </div>
 
         <!-- The single overflow control. -->
         <div class="rs-more-wrap">
@@ -1077,7 +1084,7 @@
           <!-- Boot loading skeleton — shown ONLY while the first jobs fetch is
                in flight (state 'loading'). Driven by _setJobsStatus(); never
                inferred from empty array length. -->
-          <div class="rs-boot-loader" id="wbBootLoader" aria-hidden="true">
+          <div class="rs-boot-loader" id="wbBootLoader" aria-hidden="true" style="display:none">
             <div class="rs-bl-bar">
               <span class="rs-skel" style="width:140px;height:14px"></span>
               <span class="rs-skel" style="width:72px;height:14px;margin-left:auto"></span>
@@ -1092,7 +1099,7 @@
           </div>
 
           <!-- Empty state (no job selected OR zero jobs — copy set by JS) -->
-          <div class="rs-empty" id="wbEmpty" style="display:none">
+          <div class="rs-empty" id="wbEmpty">
             <div class="rs-empty-ic">
               <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M9.5 12h5"/><path d="M12 2.5v2M12 19.5v2"/></svg>
             </div>
@@ -1157,7 +1164,6 @@
             <aside class="rs-bot-callout" id="rsBotCallout" hidden aria-live="polite">
               <span class="rs-bot-logo" aria-hidden="true">✈</span>
               <div class="rs-bot-copy"><b id="rsBotName">Telegram bot detected</b><span id="rsBotState">Checking bot…</span></div>
-              <button class="rs-bot-health" id="rsBotHealth" type="button">Check health</button>
               <a class="rs-bot-go" id="rsBotGo" target="_blank" rel="noopener noreferrer">Go to your bot</a>
             </aside>
 
@@ -1239,7 +1245,6 @@
               <!-- 1 · HEADER ROW -->
               <header class="jd-top">
                 <button class="jd-back" id="jobDetailBack" type="button" title="Back to editor" aria-label="Back to editor">
-                  <svg viewBox="0 0 16 16" class="jd-i" fill="none" stroke=          <button class="jd-back" id="jobDetailBack" type="button" title="Back to editor" aria-label="Back to editor">
                   <svg viewBox="0 0 16 16" class="jd-i" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="10 3 5 8 10 13"/></svg>
                 </button>
 
@@ -1936,7 +1941,7 @@
 <!-- BEFORE pro.js: it sets window.__inTelegram and window.__tgAutoLogin,
      which pro.js's boot path checks to decide whether to sign in first. -->
 <script src="/static/miniapp.js?v=20260729a"></script>
-<script src="/static/pro.js?v=20260823b"></script>
+<script src="/static/pro.js?v=20260906b"></script>
 <script src="/static/terminal.js?v=20260724m"></script>
 <script>
 /* Live activity — EasySell-style ticker/toasts, CodeNest copy (deploys, not money). */
@@ -2058,6 +2063,11 @@
     if (h.classList.contains('booting')) h.classList.remove('booting');
     var s = document.getElementById('bootSplash');
     if (s && !s.classList.contains('hidden')) { s.classList.add('hidden'); s.style.display = 'none'; }
+  }, 4000);
+</script>
+</body>
+</html>
+hidden'); s.style.display = 'none'; }
   }, 4000);
 </script>
 </body>

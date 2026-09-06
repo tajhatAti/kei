@@ -3571,7 +3571,7 @@ function initJobCodeMirror() {
       language: "python",
       lineWrapping: false,
       extraKeys: [
-        { key: "Mod-s", preventDefault: true, run: () => { startJob(); return true; } },
+        { key: "Mod-s", preventDefault: true, run: () => { saveJobCode(); return true; } },
         { key: "Mod-Enter", preventDefault: true, run: () => { startJob(); return true; } },
       ],
       onChange: () => {
@@ -3719,9 +3719,16 @@ function _setJobsStatus(status) {
   }
   if (status === "loading") {
     ws.style.display = "none";
-    emp.style.display = "none";
-    if (boot) boot.style.display = "";
+    // Never leave the pane black: keep the empty panel up with loading copy
+    // while the first fetch is in flight. Hiding both empty and workspace
+    // painted #090909 with nothing on it.
+    emp.style.display = "";
+    if (boot) boot.style.display = "none";
     if (btnNewEmpty) btnNewEmpty.style.display = "none";
+    const t = emp.querySelector(".rs-empty-title");
+    const s = emp.querySelector(".rs-empty-sub");
+    if (t) t.textContent = "Loading your bots…";
+    if (s) s.textContent = "Fetching your saved bots & services.";
     if (list) {
       // Only paint the skeleton if the list doesn't already have real job
       // items (stale-while-revalidate: keep old rows visible while we refresh).
@@ -4241,18 +4248,16 @@ function _applyRunSpaceBotHealth(h) {
 async function _checkRunSpaceBotHealth(options) {
   options=options||{};
   const id=String(options.id||_selectedJobId||"");
-  const btn=document.getElementById("rsBotHealth");
   if(!id)return;
   const cached=_botHealthCache.get(id);
   if(!options.force&&cached&&Date.now()-cached.at<45000){if(String(_selectedJobId)===id)_applyRunSpaceBotHealth(cached.data);return;}
   try{
-    if(btn&&String(_selectedJobId)===id){btn.disabled=true;btn.textContent="Checking…";}
     const h=await api(`/api/jobs/${id}/telegram-health`,"GET",null,true);
     _botHealthCache.set(id,{at:Date.now(),data:h});
     if(String(_selectedJobId)===id)_applyRunSpaceBotHealth(h);
   }catch(e){
     if(!options.silent&&String(_selectedJobId)===id){const state=document.getElementById("rsBotState");if(state)state.textContent=e.message;}
-  }finally{if(btn&&String(_selectedJobId)===id){btn.disabled=false;btn.textContent="Check health";}}
+  }
 }
 
 function _startBotHealthPolling(){
@@ -4355,8 +4360,8 @@ function _showEmpty(zeroJobs) {
   // (loadJobs) will flip the state itself once data is confirmed.
   if (_jobsStatus === "loading") {
     if (ws) ws.style.display = "none";
-    if (emp) emp.style.display = "none";
-    if (boot) boot.style.display = "";
+    if (emp) emp.style.display = "";
+    if (boot) boot.style.display = "none";
     if (btnNewEmpty) btnNewEmpty.style.display = "none";
     return;
   }
@@ -4479,6 +4484,8 @@ function _reflectJobStatus(jobOrId) {
     _show(btnRun, !!isSelected && !detailsPrimary);
     // Visual "dirty" marker when code has been edited since last Run
     btnRun.classList.toggle("dirty", !!_jobDirty && !!isSelected);
+    const btnSaveQ = document.getElementById("btnSaveQuick");
+    if (btnSaveQ) btnSaveQ.classList.toggle("dirty", !!_jobDirty && !!isSelected);
     const lbl = btnRun.querySelector(".rs-seg-label") || btnRun.querySelector(".rs-btn-label");
     if (lbl && !btnRun.classList.contains("loading")) {
       lbl.textContent = _jobDirty ? "Save changes & run" : "Start bot";
@@ -5108,9 +5115,6 @@ function _initWbWiring() {
   if(backToCode&&!backToCode.dataset.wired){backToCode.dataset.wired="1";backToCode.addEventListener("click",()=>_setBotWizardStage("code"));}
   const tgVerify = document.getElementById("rsTgVerify");
   if(tgVerify && !tgVerify.dataset.wired){tgVerify.dataset.wired="1";tgVerify.addEventListener("click",_verifyRunSpaceTelegramBot);}
-  const tgHealth = document.getElementById("rsBotHealth");
-  if(tgHealth && !tgHealth.dataset.wired){tgHealth.dataset.wired="1";tgHealth.addEventListener("click",()=>_checkRunSpaceBotHealth({force:true}));}
-
   const onNew = (ev) => {
     if (ev) { ev.preventDefault(); ev.stopPropagation(); }
     // Hard reset: stop streams, null out selection, clear dirty flag
@@ -6311,6 +6315,41 @@ async function toggleJobAccess(id, makePublic) {
     }
     loadJobs();
   } catch (e) { toast(e.message, "error"); }
+}
+
+async function saveJobCode() {
+  const startBtn = document.getElementById("btnStartJob");
+  const editingId = startBtn && startBtn.dataset.editingId;
+  if (!editingId) { toast("Open a bot first", "error"); return; }
+  const nameEl = document.getElementById("jobName");
+  const name = ((nameEl && nameEl.value) || "").trim();
+  const languageEl = document.getElementById("jobLang");
+  const language = languageEl ? languageEl.value : "python";
+  const code = _jobCmGetValue();
+  const saveBtn = document.getElementById("btnSaveQuick");
+  const label = saveBtn && saveBtn.querySelector("span");
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.classList.add("loading");
+    if (label) label.textContent = "Saving…";
+  }
+  try {
+    const payload = { name: name || undefined, language, code, save_only: true };
+    await api("/api/jobs/" + editingId, "PATCH", payload, true);
+    _jobDirty = false;
+    toast("Saved", "success");
+    if (label) label.textContent = "Saved";
+    setTimeout(() => { if (label && label.textContent === "Saved") label.textContent = "Save"; }, 1200);
+    _reflectJobStatus(_selectedJobId);
+  } catch (e) {
+    toast(e.message, "error");
+    if (label) label.textContent = "Save";
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.classList.remove("loading");
+    }
+  }
 }
 
 async function startJob(options) {
@@ -8744,6 +8783,15 @@ function _initRsHeaderActions() {
   if (!run || run.dataset.wired === "1") return;
   run.dataset.wired = "1";
 
+  const save = document.getElementById("btnSaveQuick");
+  if (save && save.dataset.wired !== "1") {
+    save.dataset.wired = "1";
+    save.addEventListener("click", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      saveJobCode();
+    });
+  }
+
   // Forward to the real Run button so there is one deploy implementation.
   run.addEventListener("click", (e) => {
     e.preventDefault(); e.stopPropagation();
@@ -8774,7 +8822,7 @@ function _initRsHeaderActions() {
    *   error    back to idle so the user can retry; the failure is surfaced
    *            through the existing toast, not swallowed
    */
-  const RS_RUN_LABEL = { idle: "Save & Run", saving: "Saving…", starting: "Starting…" };
+  const RS_RUN_LABEL = { idle: "Run", saving: "Saving…", starting: "Starting…" };
   window.rsRunState = function (state) {
     const btn = document.getElementById("btnRunQuick");
     if (!btn) return;
@@ -8815,9 +8863,12 @@ function _initRsHeaderActions() {
   // Mirror the real button's visibility: Run only means something once a
   // job is open. #rsJobActions is what the app already toggles for that.
   const seg = document.getElementById("rsJobActions");
+  const acts = document.getElementById("rsHeadActs");
   const sync = () => {
     const on = !!seg && !seg.hasAttribute("hidden");
     run.hidden = !on;
+    if (save) save.hidden = !on;
+    if (acts) acts.hidden = !on;
     /* The label used to be copied from #btnStartJob's text on every sync,
        which fought rsRunState() for control of it: a sync firing mid-deploy
        would overwrite "Saving…" with "Save & Run" and the feedback vanished.
