@@ -1,0 +1,19 @@
+{
+  "name": "easysell-bd",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EasySell BD — realtime earning platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "npm install --omit=dev"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}

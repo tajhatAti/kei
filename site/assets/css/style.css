@@ -101,6 +101,31 @@ button { cursor: pointer; border: 0; background: none; color: inherit; }
 .nav-links { display: none; gap: 22px; color: var(--muted); font-weight: 500; }
 .nav-links a:hover { color: var(--mint); }
 .nav-right { display: flex; align-items: center; gap: 8px; }
+.live-pill {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mint);
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: rgba(46, 229, 157, 0.08);
+  white-space: nowrap;
+}
+.app-top .live-pill { display: inline-flex; }
+.live-pill i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 0 0 rgba(46, 229, 157, 0.7);
+  animation: livepulse 1.6s infinite;
+}
+@keyframes livepulse {
+  70% { box-shadow: 0 0 0 8px rgba(46, 229, 157, 0); }
+}
 .lang-btn, .ghost-btn, .icon-btn {
   height: 38px;
   padding: 0 12px;
@@ -603,6 +628,7 @@ footer.site {
 
 @media (min-width: 860px) {
   .nav-links { display: flex; }
+  .nav .live-pill { display: inline-flex; }
   .hero { grid-template-columns: 1.05fr 0.95fr; padding: 56px 0 28px; }
   .grid-3 { grid-template-columns: repeat(3, 1fr); }
   .steps { grid-template-columns: repeat(3, 1fr); }

@@ -1,9 +1,7 @@
 (() => {
   const $ = (sel, el = document) => el.querySelector(sel);
-  const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
   const app = $("#app");
   const toastBox = $("#toast");
-  const modalBox = $("#modal");
 
   const store = {
     get(k, d) {
@@ -14,7 +12,8 @@
 
   const state = {
     lang: store.get("es_lang", "bn"),
-    session: store.get("es_session", null),
+    token: store.get("es_token", null),
+    user: null,
     country: ES.COUNTRIES[0],
     countryOpen: false,
     countryQ: "",
@@ -23,7 +22,9 @@
     progress: 0,
     wdMethod: "bKash",
     wdAmount: "",
-    wdWallet: ""
+    wdWallet: "",
+    live: { users: 0, paid: 0, online: 0, ticker: ES.TICKER.map(x => ({ ...x, img: "/" + x.img.replace(/^\//, "") })) },
+    busy: false
   };
 
   function t(k) {
@@ -35,12 +36,10 @@
   function flag(code) {
     return `https://flagcdn.com/w40/${code}.png`;
   }
-  function todayKey() {
-    return new Date().toISOString().slice(0, 10);
+  function initials(name) {
+    return (name || "U").trim().split(/\s+/).slice(0, 2).map(s => s[0]).join("").toUpperCase();
   }
-  function uid() {
-    return Math.random().toString(36).slice(2, 8).toUpperCase();
-  }
+  function current() { return state.user; }
   function route() {
     let h = location.hash.replace(/^#/, "") || "/";
     let scroll = null;
@@ -52,50 +51,24 @@
       h = parts[0] || "/";
       scroll = parts[1];
     }
-    return { path: (h.split("?")[0] || "/") , scroll };
+    return { path: (h.split("?")[0] || "/"), scroll };
   }
-  function go(path) {
-    location.hash = path;
-  }
-  function users() { return store.get("es_users", []); }
-  function saveUsers(list) { store.set("es_users", list); }
-  function current() {
-    if (!state.session) return null;
-    return users().find(u => u.id === state.session) || null;
-  }
-  function saveUser(u) {
-    const list = users().map(x => x.id === u.id ? u : x);
-    saveUsers(list);
-  }
-  function initials(name) {
-    return (name || "U").trim().split(/\s+/).slice(0, 2).map(s => s[0]).join("").toUpperCase();
+  function go(path) { location.hash = path; }
+  function refCode() {
+    const q = location.hash.split("?")[1] || "";
+    return new URLSearchParams(q).get("ref") || "";
   }
 
-  function seed() {
-    if (users().length) return;
-    saveUsers([{
-      id: "demo",
-      name: "Demo User",
-      phone: "1700000000",
-      dial: "+880",
-      country: "bd",
-      pass: "123456",
-      balance: 320,
-      today: 45,
-      todayDate: todayKey(),
-      earned: 860,
-      tasksDone: ["t5"],
-      refs: 3,
-      code: "EASY320",
-      activity: [
-        { t: "জয়েনিং বোনাস", a: 50, at: Date.now() - 86400000 * 4 },
-        { t: "ওয়েবসাইট ভিজিট", a: 3, at: Date.now() - 3600000 },
-        { t: "উইথড্র · bKash", a: -200, at: Date.now() - 7200000 }
-      ],
-      withdraws: [
-        { method: "bKash", amount: 200, wallet: "01700000000", status: "paid", at: Date.now() - 7200000 }
-      ]
-    }]);
+  async function api(path, opts = {}) {
+    const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
+    if (state.token) headers.Authorization = "Bearer " + state.token;
+    const res = await fetch(path, { ...opts, headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const key = data.error || "errCred";
+      throw new Error(t(key) !== key ? t(key) : key);
+    }
+    return data;
   }
 
   function toast(msg, err) {
@@ -106,14 +79,6 @@
     setTimeout(() => el.remove(), 2800);
   }
 
-  function resetToday(u) {
-    if (u.todayDate !== todayKey()) {
-      u.today = 0;
-      u.todayDate = todayKey();
-    }
-  }
-
-  /* ---------- ICONS ---------- */
   const I = {
     home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg>`,
     tasks: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l2.5 2.5L16 9"/></svg>`,
@@ -122,7 +87,15 @@
     user: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 19a7 7 0 0 1 14 0"/></svg>`
   };
 
-  /* ---------- NAV / LANDING ---------- */
+  function tickerHtml() {
+    const items = state.live.ticker || [];
+    const loop = items.length ? [...items, ...items] : [];
+    return loop.map(x => {
+      const img = (x.img || "/assets/img/avatar-1.jpg").replace(/^assets/, "/assets");
+      return `<div class="tick"><img src="${img}" alt=""><span>${x.name}</span><b>${money(x.amount)}</b><span>${x.method}</span></div>`;
+    }).join("");
+  }
+
   function nav() {
     const u = current();
     return `
@@ -137,6 +110,7 @@
           <a href="#/#pay">${t("navPay")}</a>
         </div>
         <div class="nav-right">
+          <span class="live-pill"><i></i> ${state.live.online || 0} ${t("liveNow")}</span>
           <button class="lang-btn" data-act="lang">${t("lang")}</button>
           ${u
             ? `<a class="btn sm" href="#/app">${t("dash")}</a>`
@@ -147,12 +121,6 @@
   }
 
   function landing() {
-    const ticks = [...ES.TICKER, ...ES.TICKER].map(x => {
-      const name = state.lang === "bn" ? x.name : x.nameEn;
-      const city = state.lang === "bn" ? x.city : x.cityEn;
-      return `<div class="tick"><img src="${x.img}" alt=""><span>${name} · ${city}</span><b>${money(x.amount)}</b><span>${x.method}</span></div>`;
-    }).join("");
-
     const features = [
       ["⚡", "f1t", "f1d", "Simple Tasks"],
       ["💎", "f2t", "f2d", "Instant Rewards"],
@@ -180,8 +148,8 @@
               <a class="btn lg ghost" href="#/#how">${t("heroGhost")}</a>
             </div>
             <div class="stats">
-              <div class="stat"><b>12,480+</b><span>${t("statUsers")}</span></div>
-              <div class="stat"><b>৳2.1 Cr</b><span>${t("statPaid")}</span></div>
+              <div class="stat"><b id="st-users">${state.live.users || 0}</b><span>${t("statUsers")}</span></div>
+              <div class="stat"><b id="st-paid">${money(state.live.paid || 0)}</b><span>${t("statPaid")}</span></div>
               <div class="stat"><b>4.9 ★</b><span>${t("statRate")}</span></div>
             </div>
           </div>
@@ -199,7 +167,7 @@
         </section>
       </div>
       <div class="ticker-wrap" aria-label="${t("liveNow")}">
-        <div class="ticker">${ticks}</div>
+        <div class="ticker" id="live-ticker">${tickerHtml()}</div>
       </div>
       <div class="wrap">
         <section id="why">
@@ -244,7 +212,6 @@
       <footer class="site">${t("foot")}</footer>`;
   }
 
-  /* ---------- AUTH ---------- */
   function countrySheet() {
     const q = state.countryQ.toLowerCase();
     const list = ES.COUNTRIES.filter(c =>
@@ -326,7 +293,7 @@
               ${phoneField()}
               <div class="field"><label>${t("pass")}</label><input id="pass" type="password" value="${state.form.pass}" autocomplete="${isReg ? "new-password" : "current-password"}"></div>
               ${isReg ? `<div class="field"><label>${t("cpass")}</label><input id="cpass" type="password" value="${state.form.cpass}" autocomplete="new-password"></div>` : ""}
-              <button class="btn block lg" type="submit">${isReg ? t("doReg") : t("doLog")}</button>
+              <button class="btn block lg" type="submit" ${state.busy ? "disabled" : ""}>${isReg ? t("doReg") : t("doLog")}</button>
             </form>
             <p class="switch">
               ${isReg ? t("haveAcc") + ' <a href="#/login">' + t("goLogin") + "</a>" : t("noAcc") + ' <a href="#/register">' + t("goReg") + "</a>"}
@@ -338,7 +305,6 @@
       ${state.countryOpen ? countrySheet() : ""}`;
   }
 
-  /* ---------- APP ---------- */
   function bottom(tab) {
     const items = [
       ["home", I.home, t("dash"), "#/app"],
@@ -358,7 +324,8 @@
           <div class="avatar">${initials(u.name)}</div>
           <div><small>${t("hi")}</small><b>${u.name}</b></div>
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="live-pill"><i></i> live</span>
           <button class="lang-btn" data-act="lang">${t("lang")}</button>
         </div>
       </div>`;
@@ -530,7 +497,6 @@
       </div>`;
   }
 
-  /* ---------- ACTIONS ---------- */
   function bindAuthInputs() {
     const map = { name: "name", phone: "phone", pass: "pass", cpass: "cpass", wdAmount: "wdAmount", wdWallet: "wdWallet", cq: "countryQ" };
     Object.entries(map).forEach(([id, key]) => {
@@ -551,50 +517,56 @@
     });
   }
 
-  function register() {
+  async function register() {
     const { name, phone, pass, cpass } = state.form;
     if (!name.trim()) return toast(t("errName"), true);
     if (phone.length < Math.max(7, state.country.len - 2)) return toast(t("errPhone"), true);
     if (pass.length < 6) return toast(t("errPass"), true);
     if (pass !== cpass) return toast(t("errMatch"), true);
-    const list = users();
-    const key = state.country.dial + phone;
-    if (list.some(u => u.dial + u.phone === key)) return toast(t("errExists"), true);
-    const u = {
-      id: uid(),
-      name: name.trim(),
-      phone,
-      dial: state.country.dial,
-      country: state.country.code,
-      pass,
-      balance: 50,
-      today: 50,
-      todayDate: todayKey(),
-      earned: 50,
-      tasksDone: [],
-      refs: 0,
-      code: "ES" + uid(),
-      activity: [{ t: t("joinBonus"), a: 50, at: Date.now() }],
-      withdraws: []
-    };
-    list.push(u);
-    saveUsers(list);
-    state.session = u.id;
-    store.set("es_session", u.id);
-    toast(t("bonus"));
-    go("/app");
+    try {
+      state.busy = true;
+      const data = await api("/api/register", {
+        method: "POST",
+        body: JSON.stringify({
+          name: name.trim(),
+          phone,
+          dial: state.country.dial,
+          country: state.country.code,
+          pass,
+          ref: refCode()
+        })
+      });
+      state.token = data.token;
+      state.user = data.user;
+      store.set("es_token", data.token);
+      if (window.socket) window.socket.emit("auth", data.token);
+      toast(t("bonus"));
+      go("/app");
+    } catch (e) {
+      toast(e.message, true);
+    } finally {
+      state.busy = false;
+    }
   }
 
-  function login() {
+  async function login() {
     const { phone, pass } = state.form;
-    const u = users().find(x => x.phone === phone.replace(/^0+/, "") || x.phone === phone || (x.dial + x.phone).endsWith(phone));
-    const found = users().find(x =>
-      (x.phone === phone || x.phone === phone.replace(/^0+/, "") || ("0" + x.phone) === phone) && x.pass === pass
-    );
-    if (!found) return toast(t("errCred"), true);
-    state.session = found.id;
-    store.set("es_session", found.id);
-    go("/app");
+    try {
+      state.busy = true;
+      const data = await api("/api/login", {
+        method: "POST",
+        body: JSON.stringify({ phone, pass })
+      });
+      state.token = data.token;
+      state.user = data.user;
+      store.set("es_token", data.token);
+      if (window.socket) window.socket.emit("auth", data.token);
+      go("/app");
+    } catch (e) {
+      toast(e.message, true);
+    } finally {
+      state.busy = false;
+    }
   }
 
   function startTask(id) {
@@ -617,35 +589,37 @@
     }, 180);
   }
 
-  function finishTask() {
-    const u = current();
-    const task = ES.TASKS.find(x => x.id === state.doing);
-    if (!u || !task || state.progress < 100) return;
-    resetToday(u);
-    u.balance += task.reward;
-    u.today += task.reward;
-    u.earned = (u.earned || 0) + task.reward;
-    u.tasksDone = [...(u.tasksDone || []), task.id];
-    u.activity = [{ t: state.lang === "bn" ? task.titleBn : task.titleEn, a: task.reward, at: Date.now() }, ...(u.activity || [])];
-    saveUser(u);
-    state.doing = null;
-    toast(t("taskOk") + " · " + money(task.reward));
-    render();
+  async function finishTask() {
+    if (!state.doing || state.progress < 100) return;
+    const id = state.doing;
+    try {
+      const data = await api("/api/tasks/" + id + "/complete", { method: "POST", body: "{}" });
+      state.user = data.user;
+      state.doing = null;
+      toast(t("taskOk") + " · " + money(data.reward));
+      render();
+    } catch (e) {
+      toast(e.message, true);
+    }
   }
 
-  function withdraw() {
-    const u = current();
-    const amount = Number(state.wdAmount);
-    if (!amount || amount < 100) return toast(t("errMin"), true);
-    if (amount > u.balance) return toast(t("errBal"), true);
-    if (!state.wdWallet.trim()) return toast(t("errWallet"), true);
-    u.balance -= amount;
-    u.withdraws = [{ method: state.wdMethod, amount, wallet: state.wdWallet, status: "pending", at: Date.now() }, ...(u.withdraws || [])];
-    u.activity = [{ t: `${t("withdraw")} · ${state.wdMethod}`, a: -amount, at: Date.now() }, ...(u.activity || [])];
-    saveUser(u);
-    state.wdAmount = "";
-    toast(t("wdOk"));
-    render();
+  async function withdraw() {
+    try {
+      const data = await api("/api/withdraw", {
+        method: "POST",
+        body: JSON.stringify({
+          amount: Number(state.wdAmount),
+          method: state.wdMethod,
+          wallet: state.wdWallet
+        })
+      });
+      state.user = data.user;
+      state.wdAmount = "";
+      toast(t("wdOk"));
+      render();
+    } catch (e) {
+      toast(e.message, true);
+    }
   }
 
   function onClick(e) {
@@ -674,8 +648,9 @@
       toast(t("copied"));
     }
     if (act === "logout") {
-      state.session = null;
-      store.set("es_session", null);
+      state.token = null;
+      state.user = null;
+      store.set("es_token", null);
       go("/");
     }
   }
@@ -694,16 +669,29 @@
     return path.startsWith("/app");
   }
 
+  function patchLive() {
+    const users = $("#st-users");
+    const paid = $("#st-paid");
+    const ticker = $("#live-ticker");
+    if (users) users.textContent = state.live.users || 0;
+    if (paid) paid.textContent = money(state.live.paid || 0);
+    if (ticker) ticker.innerHTML = tickerHtml();
+    $$livePills();
+  }
+  function $$livePills() {
+    document.querySelectorAll(".live-pill").forEach(el => {
+      const label = el.textContent.includes("live") && !el.textContent.includes("লাইভ") ? "live" : t("liveNow");
+      el.innerHTML = `<i></i> ${state.live.online || 0} ${label}`;
+    });
+  }
+
   function render() {
-    seed();
-    const path = hash().split("?")[0];
+    const { path, scroll } = route();
     if (needAuth(path) && !current()) {
       go("/login");
       return;
     }
     const u = current();
-    if (u) resetToday(u);
-
     if (path === "/" || path === "") app.innerHTML = landing();
     else if (path === "/login") app.innerHTML = authLayout("login");
     else if (path === "/register") app.innerHTML = authLayout("register");
@@ -716,13 +704,53 @@
 
     bindAuthInputs();
     document.documentElement.lang = state.lang === "bn" ? "bn" : "en";
+    if (scroll) requestAnimationFrame(() => document.getElementById(scroll)?.scrollIntoView({ behavior: "smooth" }));
+  }
 
-    if (path === "/" && location.hash.includes("#why")) $("#why")?.scrollIntoView();
+  function connectSocket() {
+    if (!window.io) return;
+    const socket = window.io({ transports: ["polling", "websocket"] });
+    window.socket = socket;
+    if (state.token) socket.emit("auth", state.token);
+    socket.on("stats", s => {
+      state.live = { ...state.live, ...s };
+      patchLive();
+    });
+    socket.on("ticker", item => {
+      state.live.ticker = [item, ...(state.live.ticker || [])].slice(0, 20);
+      patchLive();
+    });
+    socket.on("me", user => {
+      state.user = user;
+      const { path } = route();
+      if (path.startsWith("/app")) render();
+    });
+    socket.on("paid", info => {
+      toast(t("paid") + " · " + money(info.amount) + " " + info.method);
+    });
+  }
+
+  async function boot() {
+    try {
+      const pub = await api("/api/public");
+      state.live = { ...state.live, ...pub };
+    } catch {}
+    if (state.token) {
+      try {
+        const me = await api("/api/me");
+        state.user = me.user;
+      } catch {
+        state.token = null;
+        state.user = null;
+        store.set("es_token", null);
+      }
+    }
+    render();
+    connectSocket();
   }
 
   document.addEventListener("click", onClick);
   document.addEventListener("submit", onSubmit);
   window.addEventListener("hashchange", render);
-  seed();
-  render();
+  boot();
 })();
