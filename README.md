@@ -1,31 +1,21 @@
 # EasySell BD
 
-রিয়েলটাইম অনলাইন আয় প্ল্যাটফর্ম — Node.js ব্যাকএন্ড + Socket.IO।
+রিয়েলটাইম ইউজার প্যানেল + অ্যাডমিন প্যানেল। অরিজিনাল PHP স্ক্রিপ্টের সব মডিউল কাভার করা।
 
-রেজিস্টার/লগইন, কাজ, উইথড্র, রেফার — সব সার্ভারে সেভ হয়। লাইভ টিকার ও অনলাইন কাউন্ট রিয়েলটাইম।
+## লগইন
+**ইউজার:** `01700000000` / `123456`  
+**অ্যাডমিন:** `admin` / `admin123`  → `#/admin/login`
 
-## ডেমো লগইন
-- মোবাইল: `01700000000`
-- পাসওয়ার্ড: `123456`
+গিফট কোড: `EASY50`
 
-## Render ডিপ্লয়
+## Render
+- Runtime: **Node**
+- Build Command: `npm install`
+- Start Command: `npm start`
+- Branch: `arena/01a0760d-kei`
 
-1. [Render](https://render.com) → **New +** → **Web Service**
-2. GitHub রিপো `tajhatAti/kei` কানেক্ট
-3. **Branch:** `arena/01a0760d-kei`
-4. ফর্ম পূরণ:
-   - **Runtime / Environment:** `Node`
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-5. Create Web Service
+## ইউজার প্যানেল
+dashboard, work, micro_jobs, typing_job, job_post, monthly_salary, target_bonus, gift, team, leaderboard, support, report, activate, history, member_stats, profile, withdraw, totp
 
-Build Command খালি রাখবেন না — অবশ্যই `npm install` লিখুন।
-
-## লোকাল
-
-```bash
-npm install
-npm start
-```
-
-ডিফল্ট: http://0.0.0.0:8080
+## অ্যাডমিন প্যানেল
+dashboard, users, withdrawals, withdraw_methods, activations, task_settings, micro_jobs, typing_job, job_post, monthly_salary, target_bonus, sheets/gifts, tickets, popup_settings, settings, admin_account
