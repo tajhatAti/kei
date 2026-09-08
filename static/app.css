@@ -4995,12 +4995,12 @@ body:has(#screen-landing:not(.hidden)) {
   display: grid; place-items: center;
   border-radius: 50%;
   color: #fff;
-  font-size: 11px;
+  font-size: var(--fs-1);
   font-weight: 700;
   flex: 0 0 auto;
   line-height: 1;
 }
-.live-ava.sm { width: 22px; height: 22px; font-size: 10px; }
+.live-ava.sm { width: 22px; height: 22px; font-size: var(--fs-1); }
 
 .live-toasts {
   position: fixed;
@@ -5155,3 +5155,209 @@ body:has(#screen-landing:not(.hidden)) {
 
 html.booting .live-strip,
 html.tg-no-auth .live-strip { display: none !important; }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   LIVE-BUG PATCHES (2026-09-08) — last word so earlier cascade cannot
+   resurrect the four screenshot defects.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Auth ink. `.auth` set light tokens but never `color`, so body `#edf0f6`
+   leaked onto the white card and headings looked stuck-faded. */
+.auth {
+  color: var(--fg);
+  background: var(--bg);
+}
+
+/* Want-shot auth: dark card, Telegram first, a white-slab submit.
+   Landing stays the light shop window. */
+.auth {
+  --bg:        #090b10;
+  --bg-deep:   #05070c;
+  --bg-2:      #0d1017;
+  --bg-3:      #181d28;
+  --bar:       #0d1017;
+  --card:      #10131b;
+  --card-2:    #181d28;
+  --line:      #1e2431;
+  --line-2:    #2a3242;
+  --fg:        #edf0f6;
+  --fg-2:      #b9c1d0;
+  --fg-3:      #8993a5;
+  --fg-4:      #8993a5;
+  --fg-off:    #5b6577;
+  color-scheme: dark;
+}
+.auth .link,
+.auth-form .field-row .link {
+  color: var(--fg) !important;
+}
+
+/* Boot hid `.auth` / `.hero` with display:none while aurora-rise `both`
+   captured opacity:0; uncovering them later left headings invisible. */
+html:not(.booting) .reveal,
+html:not(.booting) .auth-main,
+html:not(.booting) #screen-landing .section {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+/* Back sat `position:absolute` on the card and covered the brand mark. */
+.auth-card > .back,
+.auth .back {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 var(--s3);
+  left: auto;
+  top: auto;
+}
+@media (min-width: 901px) {
+  .auth-head { padding-top: 0; }
+}
+
+/* Banner when Telegram's widget never arrives — not a black empty slot. */
+.auth-note {
+  display: block;
+  margin: var(--s3) 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-left-color: var(--warn);
+  border-radius: var(--r-row);
+  background: var(--card-2);
+  color: var(--fg-2);
+  font-size: var(--fs-3);
+  line-height: 1.45;
+}
+.auth-note[hidden] { display: none !important; }
+
+/* Eye icon, not the leftover "SHOW" word. The button still carries the
+   Show/Hide text for the existing reveal test; visually it is an eye. */
+.pw-wrap { position: relative; display: block; }
+.pw-wrap input { width: 100%; padding-right: 44px; }
+.pw-toggle,
+.pw-eye {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--fg-3);
+  overflow: hidden;
+  white-space: nowrap;
+  text-indent: 110%;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+.pw-toggle:hover,
+.pw-eye:hover { color: var(--fg); background: var(--card-2); }
+.pw-toggle::before,
+.pw-eye::before {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 0 auto;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><path d='M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z'/><circle cx='12' cy='12' r='3'/></svg>") center / contain no-repeat;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><path d='M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z'/><circle cx='12' cy='12' r='3'/></svg>") center / contain no-repeat;
+}
+.pw-toggle[aria-pressed="true"]::before,
+.pw-eye.on::before {
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><path d='M3 3l18 18'/><path d='M9.9 5.9A9.4 9.4 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16.6 16.6 0 0 1-2.2 3.1M6.1 6.9A16.2 16.2 0 0 0 2.5 12S6 18.5 12 18.5a9.1 9.1 0 0 0 3.3-.6'/><path d='M9.5 9.7a3 3 0 0 0 4.6 4'/></svg>") center / contain no-repeat;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><path d='M3 3l18 18'/><path d='M9.9 5.9A9.4 9.4 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16.6 16.6 0 0 1-2.2 3.1M6.1 6.9A16.2 16.2 0 0 0 2.5 12S6 18.5 12 18.5a9.1 9.1 0 0 0 3.3-.6'/><path d='M9.5 9.7a3 3 0 0 0 4.6 4'/></svg>") center / contain no-repeat;
+}
+.pw-eye svg { display: none; } /* CSS mask is the visible glyph */
+
+/* Landing terminal: light `--fg-3` was inheriting onto `--bg-deep`. */
+.term-card {
+  --fg:      #edf0f6;
+  --fg-2:    #b9c1d0;
+  --fg-3:    #8993a5;
+  --fg-4:    #8993a5;
+  color: var(--fg-2);
+}
+.term-card .tc-body { background: var(--bg-deep); color: var(--fg-2); }
+.term-card .tc-mut { color: var(--fg-3); }
+.term-card .tc-cmd,
+.term-card .tc-hi { color: var(--fg); }
+.term-card .tc-ok { color: var(--ok); }
+
+/* Mobile nav: a later unscoped `.nav-links { display:flex }` beat the
+   760px hide, so the hamburger never appeared and How it works / Features
+   were unreachable on a phone. */
+@media (max-width: 760px) {
+  .nav-links { display: none !important; }
+  .nav-cta { display: none !important; }
+  .nav-burger {
+    display: inline-flex !important;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    color: var(--fg);
+  }
+  .nav-burger span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: currentColor;
+    border-radius: 1px;
+  }
+  .nav-sheet {
+    display: none;
+    flex-direction: column;
+    gap: var(--s1);
+    padding: var(--s3);
+  }
+  .nav-sheet:not(.hidden) { display: flex; }
+  .nav-sheet .nav-link,
+  .nav-sheet button {
+    min-height: 44px;
+    justify-content: flex-start;
+    padding: 12px var(--s3);
+    border-radius: var(--r-ctl);
+    width: 100%;
+  }
+}
+
+/* Overview: Restart / Stop + collapsible logs sit with State / Uptime. */
+.jd-ov-logs {
+  margin-top: var(--s2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-row);
+  background: var(--card-2);
+  padding: 0;
+}
+.jd-ov-logs > summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--s3);
+  font-size: var(--fs-3);
+  font-weight: 600;
+  color: var(--fg-2);
+}
+.jd-ov-logs > summary::-webkit-details-marker { display: none; }
+.jd-ov-logs[open] > summary { border-bottom: 1px solid var(--line); }
+.jd-ov-logs .jd-term {
+  margin: 0;
+  max-height: 28vh;
+  overflow: auto;
+  border: 0;
+  border-radius: 0 0 var(--r-row) var(--r-row);
+}

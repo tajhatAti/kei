@@ -24,7 +24,7 @@
      layering a tenth sheet over them could only ever be a coat of paint,
      because 1,973 lines of classic.css and 1,959 of runspace-dark.css
      kept asserting the old shape underneath. -->
-<link rel="stylesheet" href="/static/app.css?v=20260906b">
+<link rel="stylesheet" href="/static/app.css?v=20260908b">
 <script>
 /* THEME BEFORE PAINT.
  * data-theme was only set once pro.js ran, so the very first paint used the
@@ -234,13 +234,16 @@
       <button class="btn-ghost" onclick="showScreen('screen-signin')">Sign in</button>
       <button class="btn-primary" onclick="showScreen('screen-signup')">Get started</button>
     </div>
-    <button class="nav-burger" id="navBurger" aria-label="Menu">
+    <button class="nav-burger" id="navBurger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="navSheet">
       <span></span><span></span><span></span>
     </button>
   </div>
   <div class="nav-sheet hidden" id="navSheet">
-    <button onclick="showScreen('screen-signin')">Sign in</button>
-    <button class="btn-primary" onclick="showScreen('screen-signup')">Get started</button>
+    <a class="nav-link" onclick="showScreen('screen-landing');closeNavSheet()">Overview</a>
+    <a class="nav-link" onclick="scrollToId('how');closeNavSheet()">How it works</a>
+    <a class="nav-link" onclick="scrollToId('features');closeNavSheet()">Features</a>
+    <button onclick="showScreen('screen-signin');closeNavSheet()">Sign in</button>
+    <button class="btn-primary" onclick="showScreen('screen-signup');closeNavSheet()">Get started</button>
   </div>
 </nav>
 
@@ -268,7 +271,7 @@
         </div>
         <pre class="tc-body"><span class="tc-mut">$</span> <span class="tc-cmd">codenest deploy main.py</span>
 <span class="tc-mut">→</span> detected <span class="tc-hi">python 3.11</span>
-<span class="tc-mut">→</span> installing <span class="tc-hi">python-telegram-bot</span>, <span class="tc-hi">requests</span>
+<span class="tc-mut">→</span> installing <span class="tc-hi">python-telegram-bot</span>
 <span class="tc-ok">✓</span> dependencies ready <span class="tc-mut">(4.2s)</span>
 <span class="tc-ok">✓</span> bot started · pid 4417
 
@@ -392,7 +395,7 @@
 <div class="auth" id="screen-signup">
   <div class="auth-main">
     <div class="auth-card">
-      <button class="back" onclick="showScreen('screen-landing')">← Back</button>
+      <button class="back" type="button" onclick="showScreen('screen-landing')">← Back</button>
       <div class="auth-head">
         <div class="brand-mark lg"><object type="image/svg+xml" data="/static/codenest-mark.svg?v=20260724m" aria-label="CodeNest"></object></div>
         <h2>Create your account</h2>
@@ -415,7 +418,7 @@
       <label class="field"><span>Password</span>
         <span class="pw-wrap">
           <input type="password" id="su_password" placeholder="At least 6 characters" autocomplete="new-password" required>
-          <button type="button" class="pw-toggle" data-pw="su_password" aria-label="Show password" aria-pressed="false">Show</button>
+                  <button type="button" class="pw-toggle" data-pw="su_password" aria-pressed="false" aria-label="Show password">Show</button>
         </span>
         <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
         <span class="strength-label" id="strengthLabel"></span>
@@ -464,7 +467,7 @@
       <label class="field"><span>Password</span>
         <span class="pw-wrap">
           <input type="password" id="si_password" placeholder="••••••••" autocomplete="current-password" required>
-          <button type="button" class="pw-toggle" data-pw="si_password" aria-label="Show password" aria-pressed="false">Show</button>
+                  <button type="button" class="pw-toggle" data-pw="si_password" aria-pressed="false" aria-label="Show password">Show</button>
         </span>
       </label>
           <div class="field-row">
@@ -549,7 +552,7 @@
       <label class="field"><span>New password</span>
         <span class="pw-wrap">
           <input type="password" id="fp_newpass" placeholder="••••••••" autocomplete="new-password" required>
-          <button type="button" class="pw-toggle" data-pw="fp_newpass" aria-label="Show password" aria-pressed="false">Show</button>
+                  <button type="button" class="pw-toggle" data-pw="fp_newpass" aria-pressed="false" aria-label="Show password">Show</button>
         </span>
         <div class="strength-bar"><div class="strength-fill" id="strengthFill3"></div></div>
         <span class="strength-label" id="strengthLabel3"></span>
@@ -557,7 +560,7 @@
         <label class="field"><span>Confirm password</span>
           <span class="pw-wrap">
             <input type="password" id="fp_confirmpass" placeholder="••••••••" autocomplete="new-password" required>
-            <button type="button" class="pw-toggle" data-pw="fp_confirmpass" aria-label="Show password" aria-pressed="false">Show</button>
+                      <button type="button" class="pw-toggle" data-pw="fp_confirmpass" aria-pressed="false" aria-label="Show password">Show</button>
           </span>
         </label>
         <button type="submit" class="btn-primary block" id="btnForgot3"><span>Update password</span></button>
@@ -1326,8 +1329,14 @@
 
                   <div class="jd-ov-actions">
                     <button class="jd-btn jd-primary" id="jdOvOpenBot" type="button"><span>Open bot</span></button>
+                    <button class="jd-btn" id="jdOvRestart" type="button"><span>Restart</span></button>
+                    <button class="jd-btn" id="jdOvStop" type="button"><span>Stop</span></button>
                     <button class="jd-btn" id="jdOvEdit" type="button"><span>Open in editor</span></button>
                   </div>
+                  <details class="jd-ov-logs" id="jdOvLogs">
+                    <summary>View logs</summary>
+                    <pre class="jd-term" id="jdOvLogBody">No logs yet.</pre>
+                  </details>
                 </div>
 
                 <!-- CODE -->
@@ -1941,7 +1950,7 @@
 <!-- BEFORE pro.js: it sets window.__inTelegram and window.__tgAutoLogin,
      which pro.js's boot path checks to decide whether to sign in first. -->
 <script src="/static/miniapp.js?v=20260729a"></script>
-<script src="/static/pro.js?v=20260906b"></script>
+<script src="/static/pro.js?v=20260908b"></script>
 <script src="/static/terminal.js?v=20260724m"></script>
 <script>
 /* Live activity — EasySell-style ticker/toasts, CodeNest copy (deploys, not money). */
@@ -2063,11 +2072,6 @@
     if (h.classList.contains('booting')) h.classList.remove('booting');
     var s = document.getElementById('bootSplash');
     if (s && !s.classList.contains('hidden')) { s.classList.add('hidden'); s.style.display = 'none'; }
-  }, 4000);
-</script>
-</body>
-</html>
-hidden'); s.style.display = 'none'; }
   }, 4000);
 </script>
 </body>

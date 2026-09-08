@@ -155,7 +155,15 @@ const _TG_FORBIDDEN_SCREENS = {
   "screen-landing": 1,
 };
 
+function closeNavSheet() {
+  const navSheet = document.getElementById("navSheet");
+  const burger = document.getElementById("navBurger");
+  if (navSheet) navSheet.classList.add("hidden");
+  if (burger) burger.setAttribute("aria-expanded", "false");
+}
+
 function showScreen(id) {
+  try { closeNavSheet(); } catch (e) {}
   /* ONE CHOKE POINT instead of seven guarded call sites. Every route that
    * wants an auth screen inside Telegram gets the dashboard plus a silent
    * re-login, so no code path can ever paint a hidden screen again. */
@@ -1276,6 +1284,11 @@ function initPasswordEyes() {
   ["su_password", "si_password", "fp_newpass", "fp_confirmpass"].forEach(id => {
     const input = document.getElementById(id);
     if (!input || input.dataset.eye) return;
+    const existingWrap = input.closest(".pw-wrap");
+    if (existingWrap && existingWrap.querySelector(".pw-toggle, .pw-eye")) {
+      input.dataset.eye = "1";
+      return; // markup already has a reveal control — do not nest another wrap
+    }
     input.dataset.eye = "1";
     const btn = document.createElement("button");
     btn.type = "button";
@@ -1290,12 +1303,15 @@ function initPasswordEyes() {
       btn.classList.toggle("on", show);
       input.focus();
     });
-    // Wrap input in a relative holder so the eye centers exactly on the field.
-    const wrap = document.createElement("span");
-    wrap.className = "pw-wrap";
-    input.parentNode.insertBefore(wrap, input);
-    wrap.appendChild(input);
-    wrap.appendChild(btn);
+    if (existingWrap) {
+      existingWrap.appendChild(btn);
+    } else {
+      const wrap = document.createElement("span");
+      wrap.className = "pw-wrap";
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+      wrap.appendChild(btn);
+    }
   });
 }
 initPasswordEyes();
@@ -3171,7 +3187,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // Marketing mobile nav (burger -> sheet)
   const burger = document.getElementById("navBurger");
   const navSheet = document.getElementById("navSheet");
-  if (burger && navSheet) burger.addEventListener("click", () => navSheet.classList.toggle("hidden"));
+  if (burger && navSheet) burger.addEventListener("click", () => {
+    const open = navSheet.classList.contains("hidden");
+    navSheet.classList.toggle("hidden", !open);
+    burger.setAttribute("aria-expanded", open ? "true" : "false");
+  });
 
   // Mobile bottom nav "Menu" → left side drawer (full-height, standard)
   const bnMore = document.getElementById("bnMore");
@@ -3995,6 +4015,8 @@ function _renderLogs(text, force) {
 
   if (!text || !text.trim()) {
     body.innerHTML = '<span class="rs-log-empty">// Logs will appear here when you run the job.</span>';
+    const ovEmpty = document.getElementById("jdOvLogBody");
+    if (ovEmpty) ovEmpty.textContent = "No logs yet.";
     if (dot) { dot.className = "rs-log-dot"; dot.title = "idle"; }
     _reflectJobStatus(_selectedJobId);
     return;
@@ -4016,6 +4038,11 @@ function _renderLogs(text, force) {
   // when that tab is actually mounted — writing to a hidden panel on every
   // SSE tick is exactly the kind of wasted work that froze this page before.
   if (_jdOpen && _jdTab === "logs") _jdMirrorLogs();
+  const ov = document.getElementById("jdOvLogBody");
+  if (ov) {
+    const t = tail.join("\n");
+    if (ov.textContent !== t) ov.textContent = t;
+  }
 }
 
 // ─── Workspace chrome ─────────────────────────────────────────────────
@@ -6248,6 +6275,8 @@ function _initDetailWiring() {
     if (url) { const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener"; a.click(); }
     else toast("No public URL yet — deploy the bot to get one.", "info");
   });
+  on("jdOvRestart", () => { if (_selectedJobId) restartJobById(_selectedJobId); });
+  on("jdOvStop",    () => { if (_selectedJobId) stopJobById(_selectedJobId); });
   on("jdOvEdit", () => { closeJobDetails(); setTimeout(_jobCmFocus, 220); });
   on("jdOvUrlCopy", () => {
     const a = document.getElementById("jdOvUrl");
@@ -8110,6 +8139,8 @@ window.onTelegramAuth = async function (user) {
           const isSignin = slotId === "telegramLoginBtn";
           show(isSignin ? "telegramUnavailable" : "telegramUnavailableSignup", true);
           show(isSignin ? "emailAuthSignin" : "emailAuthSignup", true);
+          // Hide the empty widget slot — a dead iframe painted a black bar.
+          show(isSignin ? "telegramLogin" : "telegramSignup", false);
         });
       }, 4000);
     } else {
